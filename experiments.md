@@ -467,3 +467,66 @@ Current best models:
 
 2. DistilBERT multilingual Transformer  
    Macro F1: 0.885115
+
+## EXP-010 — XLM-RoBERTa + Warmup Scheduler + Early Stopping
+
+Date:
+2026-07-07
+
+### Objective
+
+Improve transformer training stability using:
+- learning rate warmup
+- linear scheduler
+- early stopping
+- tokenizer/model artifact saving
+
+
+### Model
+
+- xlm-roberta-base
+
+
+### Training
+
+Optimizer:
+- AdamW
+
+Learning rate:
+- 2e-5
+
+Warmup:
+- 10%
+
+Epochs:
+- 8
+
+Early stopping:
+- patience=2
+
+
+### Result
+
+Epoch 1: 0.837964
+Epoch 2: 0.886273
+Epoch 3: 0.896827
+Epoch 4: 0.895631
+Epoch 5: 0.912248 ⭐
+Epoch 6: 0.909694
+Epoch 7: 0.909373
+
+
+Best Macro F1:
+
+0.912248
+
+
+### Decision
+
+✅ Accepted
+
+
+### Analysis
+
+Warmup scheduler and early stopping improved training stability.
+XLM-RoBERTa significantly outperformed previous transformer experiments and became the new official baseline.
