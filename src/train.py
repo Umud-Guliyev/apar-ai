@@ -7,6 +7,7 @@ from config import TEST_SIZE, SEED
 from data import load_train
 from features import build_vectorizer
 
+from models import build_model
 
 def main():
 
@@ -29,7 +30,7 @@ def main():
 
     X_valid = vectorizer.transform(X_valid)
 
-    model = LinearSVC()
+    model = build_model()
 
     model.fit(X_train, y_train)
 

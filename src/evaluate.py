@@ -8,6 +8,8 @@ from data import load_train
 from features import build_vectorizer
 from config import SEED
 
+from models import build_model
+
 
 def main():
 
@@ -20,7 +22,7 @@ def main():
     pipeline = Pipeline(
         [
             ("tfidf", build_vectorizer()),
-            ("model", LinearSVC()),
+            ("model", build_model()),
         ]
     )
 

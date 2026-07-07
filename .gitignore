@@ -1,72 +1,19 @@
-# Virtual Environment
+# Virtual env
 .venv/
-venv/
-env/
-ENV/
 
 # Python
 __pycache__/
-*.py[cod]
-*$py.class
-*.pyd
-*.so
+*.pyc
 
-# Jupyter Notebook
-.ipynb_checkpoints/
+# Models
+*.bin
+*.pt
+*.pth
+*.safetensors
 
-# Distribution / Packaging
-build/
-dist/
-*.egg-info/
-.eggs/
-
-# Logs
-*.log
-
-# Environment Variables
-.env
-.env.*
-
-# VS Code
-.vscode/
-
-# PyCharm
-.idea/
-
-# macOS
-.DS_Store
-
-# Windows
-Thumbs.db
-Desktop.ini
-
-# Test & Coverage
-.pytest_cache/
-.coverage
-coverage.xml
-htmlcov/
-
-# Type Checkers
-.mypy_cache/
-.pyre/
-.pytype/
-
-# Ruff
-.ruff_cache/
-
-# Temporary files
-*.tmp
-*.temp
-
-# Model files
-*.pkl
-*.joblib
-*.h5
-*.keras
-*.onnx
-
-# Cache
+# HuggingFace cache
 .cache/
+huggingface/
 
-# Local settings
-.python-version
+# Outputs
+outputs/
