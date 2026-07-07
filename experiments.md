@@ -331,3 +331,76 @@ The new production baseline uses:
 - class_weight="balanced"
 - Character TF-IDF (char_wb)
 - ngram_range=(3,5)
+
+---
+
+## EXP-008 — DistilBERT Multilingual Transformer
+
+**Date:** 2026-07-07
+
+### Hypothesis
+
+A multilingual Transformer model pretrained on many languages can better capture the semantic meaning of multilingual user feedback compared to sparse TF-IDF features.
+
+### Model
+
+- DistilBERT Multilingual
+- Model: `distilbert-base-multilingual-cased`
+
+### Tokenizer
+
+- DistilBERT Multilingual Tokenizer
+- Max Length: 128
+
+### Training
+
+- Optimizer: AdamW
+- Learning Rate: 2e-5
+- Epochs: 3
+- Batch Size: 16
+- Train / Validation Split: 80 / 20
+- Random Seed: 42
+
+### Validation Result
+
+| Epoch | Validation Macro F1 |
+|-------:|--------------------:|
+| 1 | 0.870079 |
+| 2 | 0.870067 |
+| 3 | **0.879706** |
+
+### Best Score
+
+**Macro F1: 0.879706**
+
+### Improvement
+
+Compared to the current TF-IDF + LinearSVC baseline:
+
+0.879706 − 0.887025 = **−0.007319**
+
+### Decision
+
+❌ Rejected
+
+### Analysis
+
+Although the multilingual Transformer successfully learned the task and achieved stable convergence, it did not outperform the existing character-level TF-IDF + LinearSVC baseline.
+
+Possible reasons include:
+
+- Limited training data for fine-tuning a Transformer.
+- Only three training epochs were used.
+- No learning-rate scheduling or early stopping.
+- Default hyperparameters without optimization.
+- DistilBERT has fewer parameters than larger multilingual models.
+
+### Conclusion
+
+The current production baseline remains:
+
+- Character TF-IDF (`char_wb`, 3–5)
+- LinearSVC
+- `class_weight="balanced"`
+
+The Transformer pipeline is now fully implemented and can be further improved through hyperparameter tuning and architectural enhancements in future experiments.
