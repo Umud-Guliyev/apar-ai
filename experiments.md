@@ -404,3 +404,66 @@ The current production baseline remains:
 - `class_weight="balanced"`
 
 The Transformer pipeline is now fully implemented and can be further improved through hyperparameter tuning and architectural enhancements in future experiments.
+
+---
+
+## EXP-009 — Transformer Scheduler + Warmup + Early Stopping
+
+**Date:** 2026-07-07
+
+### Hypothesis
+
+Transformer fine-tuning performance can be improved by using a learning rate scheduler with warmup and early stopping.
+
+### Changes
+
+Training improvements:
+
+- AdamW optimizer
+- Linear learning rate scheduler
+- Warmup steps = 10% of total steps
+- Early stopping with patience=2
+- Increased maximum epochs from 3 to 5
+
+Model:
+
+- DistilBERT multilingual
+- distilbert-base-multilingual-cased
+
+### Validation Result
+
+| Epoch | Macro F1 |
+|------:|---------:|
+| 1 | 0.825155 |
+| 2 | 0.876053 |
+| 3 | 0.882393 |
+| 4 | 0.884948 |
+| 5 | **0.885115** |
+
+### Best Score
+
+**Macro F1: 0.885115**
+
+### Improvement
+
+Compared to EXP-008:
+
++0.005409
+
+### Decision
+
+✅ Accepted
+
+### Analysis
+
+Learning rate scheduling and warmup improved Transformer fine-tuning stability. The model achieved better convergence and surpassed the previous Transformer baseline.
+
+However, the character-level TF-IDF + LinearSVC model remains slightly stronger.
+
+Current best models:
+
+1. Character TF-IDF + LinearSVC  
+   Macro F1: 0.887025
+
+2. DistilBERT multilingual Transformer  
+   Macro F1: 0.885115

@@ -1,4 +1,4 @@
-MODEL_NAME = "distilbert-base-multilingual-cased"
+MODEL_NAME = "xlm-roberta-base"
 
 TRAIN_FILE = "data/train.csv"
 
