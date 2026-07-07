@@ -19,9 +19,11 @@ from transformer.config import (
 from transformer.dataset import load_data, FeedbackDataset
 from transformer.tokenizer import create_tokenizer
 from transformer.model import create_model
+from transformer.utils import set_seed
 
 
 def train():
+    set_seed(42)
 
     df, encoder = load_data()
 
