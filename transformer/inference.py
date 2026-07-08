@@ -3,15 +3,16 @@ import pandas as pd
 import joblib
 
 from torch.utils.data import DataLoader
-from transformers import AutoTokenizer
+from transformers import (
+    AutoTokenizer,
+    AutoModelForSequenceClassification,
+)
 
 from transformer.config import (
     MAX_LENGTH,
-    MODEL_NAME
 )
 
 from transformer.dataset import FeedbackDataset
-from transformer.model import create_model
 
 
 TEST_FILE = "data/test.csv"
@@ -20,12 +21,21 @@ OUTPUT_FILE = "submission.csv"
 
 def predict():
 
-    device = torch.device("cpu")
+    device = torch.device(
+        "cuda" if torch.cuda.is_available() else "cpu"
+    )
 
     print("Loading test data...")
 
     test_df = pd.read_csv(TEST_FILE)
 
+    test_df["tag"] = test_df["tag"].fillna("")
+
+    test_df["text"] = (
+        test_df["feedback"]
+        + " "
+        + test_df["tag"]
+    )
 
     print("Loading tokenizer...")
 
@@ -33,88 +43,91 @@ def predict():
         "artifacts/tokenizer"
     )
 
-
     print("Loading label encoder...")
 
     encoder = joblib.load(
         "artifacts/label_encoder.pkl"
     )
 
-
     dataset = FeedbackDataset(
         test_df,
         tokenizer,
         MAX_LENGTH,
-        inference=True
+        inference=True,
     )
-
 
     loader = DataLoader(
         dataset,
-        batch_size=32
+        batch_size=32,
+        shuffle=False,
     )
 
+    print("Loading ensemble models...")
 
-    print("Loading model...")
+    ensemble_logits = None
 
-    model = create_model()
+    for fold in range(1, 6):
 
-    model.load_state_dict(
-        torch.load(
-            "artifacts/best_model.pt",
-            map_location=device
+        print(f"Fold {fold}")
+
+        model = AutoModelForSequenceClassification.from_pretrained(
+            f"artifacts/fold_{fold}"
         )
-    )
 
-    model.to(device)
+        model.to(device)
+        model.eval()
 
-    model.eval()
+        fold_logits = []
 
+        with torch.no_grad():
 
-    predictions = []
+            for batch in loader:
 
+                batch = {
+                    k: v.to(device)
+                    for k, v in batch.items()
+                }
 
-    with torch.no_grad():
+                outputs = model(**batch)
 
-        for batch in loader:
+                fold_logits.append(
+                    outputs.logits.cpu()
+                )
 
-            batch = {
-                k:v.to(device)
-                for k,v in batch.items()
-            }
+        fold_logits = torch.cat(fold_logits)
 
-            outputs = model(**batch)
+        if ensemble_logits is None:
 
-            preds = torch.argmax(
-                outputs.logits,
-                dim=1
-            )
+            ensemble_logits = fold_logits
 
-            predictions.extend(
-                preds.cpu().numpy()
-            )
+        else:
 
+            ensemble_logits += fold_logits
+
+    ensemble_logits /= 5
+
+    predictions = torch.argmax(
+        ensemble_logits,
+        dim=1,
+    ).numpy()
 
     labels = encoder.inverse_transform(
         predictions
     )
 
-
     submission = pd.DataFrame(
         {
             "id": test_df["id"],
-            "label": labels
+            "label": labels,
         }
     )
 
-
     submission.to_csv(
         OUTPUT_FILE,
-        index=False
+        index=False,
     )
 
-
-    print("Submission created:")
+    print("\nSubmission created successfully!")
     print(OUTPUT_FILE)
 
 

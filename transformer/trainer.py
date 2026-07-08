@@ -4,7 +4,7 @@ import torch
 
 from torch.utils.data import DataLoader
 from torch.optim import AdamW
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import StratifiedKFold
 from transformers import get_linear_schedule_with_warmup
 
 from transformer.evaluate import evaluate
@@ -27,65 +27,13 @@ def train():
 
     df, encoder = load_data()
 
-    train_df, val_df = train_test_split(
-        df,
-        test_size=0.2,
+    skf = StratifiedKFold(
+        n_splits=5,
+        shuffle=True,
         random_state=42,
-        stratify=df["label_id"],
     )
 
     tokenizer = create_tokenizer()
-
-    train_dataset = FeedbackDataset(
-        train_df,
-        tokenizer,
-        MAX_LENGTH,
-    )
-
-    val_dataset = FeedbackDataset(
-        val_df,
-        tokenizer,
-        MAX_LENGTH,
-    )
-
-    train_loader = DataLoader(
-        train_dataset,
-        batch_size=BATCH_SIZE,
-        shuffle=True,
-    )
-
-    val_loader = DataLoader(
-        val_dataset,
-        batch_size=BATCH_SIZE,
-    )
-
-    device = torch.device(
-        "cuda" if torch.cuda.is_available() else "cpu"
-    )
-
-    model = create_model()
-    model.to(device)
-
-    optimizer = AdamW(
-        model.parameters(),
-        lr=LEARNING_RATE,
-        weight_decay=0.01,
-    )
-
-    total_steps = len(train_loader) * EPOCHS
-
-    warmup_steps = int(
-        total_steps * WARMUP_RATIO
-    )
-
-    scheduler = get_linear_schedule_with_warmup(
-        optimizer,
-        num_warmup_steps=warmup_steps,
-        num_training_steps=total_steps,
-    )
-
-    best_score = 0.0
-    patience_counter = 0
 
     os.makedirs(
         "artifacts",
@@ -101,83 +49,147 @@ def train():
         "artifacts/tokenizer"
     )
 
-    for epoch in range(EPOCHS):
+    for fold, (train_idx, val_idx) in enumerate(
+        skf.split(
+            df,
+            df["label_id"],
+        ),
+        start=1,
+    ):
 
-        model.train()
+        print("=" * 50)
+        print(f"Fold {fold}")
+        print("=" * 50)
 
-        total_loss = 0
+        train_df = df.iloc[train_idx].reset_index(drop=True)
+        val_df = df.iloc[val_idx].reset_index(drop=True)
 
-        for batch in train_loader:
-
-            optimizer.zero_grad()
-
-            batch = {
-                k: v.to(device)
-                for k, v in batch.items()
-            }
-
-            outputs = model(**batch)
-
-            loss = outputs.loss
-
-            loss.backward()
-
-            torch.nn.utils.clip_grad_norm_(
-                model.parameters(),
-                max_norm=1.0
-            )
-
-            optimizer.step()
-
-            scheduler.step()
-
-            total_loss += loss.item()
-
-        print(
-            f"Epoch {epoch + 1} loss: {total_loss / len(train_loader):.6f}"
+        train_dataset = FeedbackDataset(
+            train_df,
+            tokenizer,
+            MAX_LENGTH,
         )
 
-        score = evaluate(
-            model,
-            val_loader,
-            device,
+        val_dataset = FeedbackDataset(
+            val_df,
+            tokenizer,
+            MAX_LENGTH,
         )
 
-        print(
-            f"Validation Macro F1: {score:.6f}"
+        train_loader = DataLoader(
+            train_dataset,
+            batch_size=BATCH_SIZE,
+            shuffle=True,
         )
 
-        if score > best_score:
+        val_loader = DataLoader(
+            val_dataset,
+            batch_size=BATCH_SIZE,
+        )
 
-            best_score = score
-            patience_counter = 0
+        device = torch.device(
+            "cuda" if torch.cuda.is_available() else "cpu"
+        )
 
-            torch.save(
-                model.state_dict(),
-                "artifacts/best_model.pt",
-            )
+        model = create_model()
+        model.to(device)
 
-            model.save_pretrained(
-                "artifacts/model"
-            )
+        optimizer = AdamW(
+            model.parameters(),
+            lr=LEARNING_RATE,
+            weight_decay=0.01,
+        )
 
-            print("✅ Best model saved.")
+        total_steps = len(train_loader) * EPOCHS
 
-        else:
+        warmup_steps = int(
+            total_steps * WARMUP_RATIO
+        )
 
-            patience_counter += 1
+        scheduler = get_linear_schedule_with_warmup(
+            optimizer,
+            num_warmup_steps=warmup_steps,
+            num_training_steps=total_steps,
+        )
+
+        best_score = 0.0
+        patience_counter = 0
+
+        for epoch in range(EPOCHS):
+
+            model.train()
+
+            total_loss = 0
+
+            for batch in train_loader:
+
+                optimizer.zero_grad()
+
+                batch = {
+                    k: v.to(device)
+                    for k, v in batch.items()
+                }
+
+                outputs = model(**batch)
+
+                loss = outputs.loss
+
+                loss.backward()
+
+                torch.nn.utils.clip_grad_norm_(
+                    model.parameters(),
+                    max_norm=1.0,
+                )
+
+                optimizer.step()
+
+                scheduler.step()
+
+                total_loss += loss.item()
 
             print(
-                f"No improvement ({patience_counter}/{PATIENCE})"
+                f"Epoch {epoch + 1} loss: {total_loss / len(train_loader):.6f}"
             )
 
-            if patience_counter >= PATIENCE:
+            score = evaluate(
+                model,
+                val_loader,
+                device,
+            )
 
-                print("\n🛑 Early stopping triggered.")
-                break
+            print(
+                f"Validation Macro F1: {score:.6f}"
+            )
+
+            if score > best_score:
+
+                best_score = score
+                patience_counter = 0
+
+                model.save_pretrained(
+                    f"artifacts/fold_{fold}"
+                )
+
+                print("✅ Best model saved.")
+
+            else:
+
+                patience_counter += 1
+
+                print(
+                    f"No improvement ({patience_counter}/{PATIENCE})"
+                )
+
+                if patience_counter >= PATIENCE:
+
+                    print("\n🛑 Early stopping triggered.")
+                    break
+
+        print(
+            f"\nFold {fold} Best Validation Macro F1: {best_score:.6f}"
+        )
 
     print("\nTraining Finished!")
-    print(f"Best Validation Macro F1: {best_score:.6f}")
 
 
 if __name__ == "__main__":
