@@ -1,3 +1,5 @@
+import os
+
 MODEL_NAME = "xlm-roberta-base"
 
 TRAIN_FILE = "data/train.csv"
@@ -20,3 +22,15 @@ SEED = 42
 PATIENCE = 2
 
 WARMUP_RATIO = 0.1
+
+
+# ==========================
+# Storage
+# ==========================
+
+BASE_DIR = "/content/drive/MyDrive/apar-ai"
+
+ARTIFACTS_DIR = os.path.join(BASE_DIR, "artifacts")
+CHECKPOINTS_DIR = os.path.join(BASE_DIR, "checkpoints")
+LOGS_DIR = os.path.join(BASE_DIR, "logs")
+SUBMISSIONS_DIR = os.path.join(BASE_DIR, "submissions")

@@ -8,6 +8,7 @@ from sklearn.model_selection import StratifiedKFold
 from transformers import get_linear_schedule_with_warmup
 
 from transformer.evaluate import evaluate
+
 from transformer.config import (
     MAX_LENGTH,
     BATCH_SIZE,
@@ -15,7 +16,9 @@ from transformer.config import (
     LEARNING_RATE,
     PATIENCE,
     WARMUP_RATIO,
+    ARTIFACTS_DIR,
 )
+
 from transformer.dataset import load_data, FeedbackDataset
 from transformer.tokenizer import create_tokenizer
 from transformer.model import create_model
@@ -36,17 +39,17 @@ def train():
     tokenizer = create_tokenizer()
 
     os.makedirs(
-        "artifacts",
+        ARTIFACTS_DIR,
         exist_ok=True,
     )
 
     joblib.dump(
         encoder,
-        "artifacts/label_encoder.pkl",
+        os.path.join(ARTIFACTS_DIR, "label_encoder.pkl"),
     )
 
     tokenizer.save_pretrained(
-        "artifacts/tokenizer"
+        os.path.join(ARTIFACTS_DIR, "tokenizer")
     )
 
     for fold, (train_idx, val_idx) in enumerate(
@@ -167,8 +170,11 @@ def train():
                 patience_counter = 0
 
                 model.save_pretrained(
-                    f"artifacts/fold_{fold}"
+                os.path.join(
+                    ARTIFACTS_DIR,
+                    f"fold_{fold}",
                 )
+            )
 
                 print("✅ Best model saved.")
 
