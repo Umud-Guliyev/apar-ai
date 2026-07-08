@@ -83,11 +83,17 @@ def train():
             train_dataset,
             batch_size=BATCH_SIZE,
             shuffle=True,
+            num_workers=2,
+            pin_memory=True,
+            persistent_workers=True,
         )
 
         val_loader = DataLoader(
             val_dataset,
             batch_size=BATCH_SIZE,
+            num_workers=2,
+            pin_memory=True,
+            persistent_workers=True,
         )
 
         device = torch.device(
