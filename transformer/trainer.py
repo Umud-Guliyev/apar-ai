@@ -167,7 +167,7 @@ def train():
 
             scheduler.step()
 
-                total_loss += loss.item()
+            total_loss += loss.item()
 
             print(
                 f"Epoch {epoch + 1} loss: {total_loss / len(train_loader):.6f}"
