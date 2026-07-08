@@ -1,6 +1,7 @@
 import os
 import joblib
 import torch
+from torch.amp import autocast, GradScaler
 
 from torch.utils.data import DataLoader
 from torch.optim import AdamW
@@ -99,6 +100,7 @@ def train():
         device = torch.device(
             "cuda" if torch.cuda.is_available() else "cpu"
         )
+        scaler = GradScaler("cuda")
 
         model = create_model()
         model.to(device)
@@ -139,20 +141,31 @@ def train():
                     for k, v in batch.items()
                 }
 
-                outputs = model(**batch)
+                with autocast("cuda"):
 
-                loss = outputs.loss
+                    outputs = model(**batch)
 
-                loss.backward()
+                    loss = outputs.loss
 
-                torch.nn.utils.clip_grad_norm_(
-                    model.parameters(),
-                    max_norm=1.0,
-                )
 
-                optimizer.step()
+                scaler.scale(loss).backward()
 
-                scheduler.step()
+
+            scaler.unscale_(optimizer)
+
+
+            torch.nn.utils.clip_grad_norm_(
+                model.parameters(),
+                max_norm=1.0,
+            )
+
+
+            scaler.step(optimizer)
+
+            scaler.update()
+
+
+            scheduler.step()
 
                 total_loss += loss.item()
 
